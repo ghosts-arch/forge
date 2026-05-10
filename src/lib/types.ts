@@ -1,5 +1,3 @@
-import { type validInput } from "./utils/validation";
-
 export const FieldKind = ["text", "number", "date"] as const;
 
 export type Field = {
@@ -9,5 +7,18 @@ export type Field = {
 
 export type AssetField = {
 	name: string;
-	value: ReturnType<typeof validInput>;
+	// biome-ignore lint/suspicious/noExplicitAny: fix later
+	value: any;
+};
+
+export type Model = {
+	uuid: string;
+	name: string;
+	fields: Field[];
+};
+
+export type Asset = {
+	id: string;
+	name: string;
+	fields: AssetField[];
 };

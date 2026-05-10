@@ -1,13 +1,13 @@
 <script lang="ts">
-    import { getAssetsQuery } from "$lib/api/assets.remote";
-    const assets = await getAssetsQuery();
+    import type { PageProps } from "./$types";
+
+    let { data }: PageProps = $props();
 </script>
 
 <a href="/">Retour</a>
 
-{#each assets as asset}
-    <span>{asset.name}</span>
-    {#each asset.fields as field}
-        <span>{field.name} : {field.value}</span>
+<ul>
+    {#each data.assets as asset}
+        <li>{asset.name} - <a href="/models/edit/{asset.id}">editer</a></li>
     {/each}
-{/each}
+</ul>

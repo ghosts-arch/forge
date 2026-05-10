@@ -1,0 +1,975 @@
+{
+  "$schema": "cartography-schema",
+  "meta": {
+    "projectName": "forge",
+    "version": "0.1.0",
+    "description": "Application de forge numérique - Tauri + SvelteKit + TypeScript",
+    "generatedAt": "2026-05-10T00:00:00Z",
+    "generator": "Copernic Cartography Agent",
+    "scanNumber": 2,
+    "changesSinceLastScan": [
+      "Fix typo: /models/edit/[uiid] → /models/edit/[uuid]",
+      "Nouvelle route: /assets/create avec formulaire et chargement de données",
+      "Nouveau loader: /assets/+page.ts pour le listing des assets",
+      "Listing assets implémenté dans /assets",
+      "Nouvelle dépendance Rust: uuid crate v1.23.1",
+      "Nouveau type backend: Asset (uuid, model_id, name, fields)",
+      "Nouvelles commandes Tauri: get_assets, create_asset",
+      "create_model: génération UUID déplacée côté serveur",
+      "Migration 000_init.sql étendue avec table assets + FK",
+      "Types frontend: Asset, AssetField ajoutés; Model.id → Model.uuid"
+    ],
+    "totalEntities": 21,
+    "totalRoutes": 7,
+    "totalDataModels": 8,
+    "totalBusinessRules": 3,
+    "totalActionsSequences": 3
+  },
+  "architecture": {
+    "pattern": "Desktop Application - Tauri v2 avec SvelteKit en SPA (Single Page Application)",
+    "description": "Application de bureau hybride avec backend Rust (Tauri) et frontend SvelteKit en mode SPA. Le backend gère la logique métier et la persistance SQLite, le frontend assure l'interface utilisateur. La communication se fait via les Tauri Commands (IPC).",
+    "diagram": {
+      "layers": [
+        { "name": "Frontend (SvelteKit 5)", "technology": "TypeScript + Svelte 5", "path": "src/" },
+        { "name": "IPC Bridge (Tauri Command)", "technology": "@tauri-apps/api", "path": "src-tauri/src/lib.rs" },
+        { "name": "Backend (Rust)", "technology": "Rust Edition 2021 + Tauri 2", "path": "src-tauri/src/" },
+        { "name": "Persistance", "technology": "SQLite via sqlx 0.8", "path": "src-tauri/migrations/" }
+      ],
+      "dataFlow": "SvelteKit → invoke() Tauri Command → Rust Handler → SQLite → Response → SvelteKit"
+    },
+    "namingConventions": {
+      "files": "kebab-case (ex: +page.svelte, app.d.ts)",
+      "routes": "snake-case avec préfixe + (ex: +page.svelte, +layout.ts)",
+      "variables": "camelCase (ex: createModel, selectedModelId)",
+      "types": "PascalCase (ex: Model, Asset, Field, AssetField)",
+      "database": "snake_case (ex: models, assets, model_id)",
+      "Rust": "snake_case pour fonctions/variables, PascalCase pour types/structs",
+      "UUID": "uuid en minuscules pour les paramètres de route, UUID v4 généré côté serveur"
+    },
+    "testingStrategy": {
+      "framework": "absent",
+      "coverage": 0.0,
+      "directories": ["tests/ (vide)"],
+      "status": "Aucun test défini. Le répertoire tests/ existe mais est vide.",
+      "recommendations": [
+        "Ajouter des tests unitaires Rust avec 'cargo test'",
+        "Ajouter des tests frontend avec vitest ou Playwright",
+        "Ajouter des tests d'intégration pour les Tauri Commands"
+      ]
+    },
+    "sensitiveZones": [
+      {
+        "id": "sen-001",
+        "description": "Base de données SQLite locale contenant les modèles et assets",
+        "path": "src-tauri/target/",
+        "risk": "medium",
+        "precautions": ["Ne pas versionner le dossier target/", "Le .gitignore exclut déjà target/"]
+      },
+      {
+        "id": "sen-002",
+        "description": "Fichier .env contenant DATABASE_URL",
+        "path": ".env",
+        "risk": "low",
+        "precautions": ["Ne pas versionner .env", "Le .gitignore exclut déjà .env et .env.*"]
+      },
+      {
+        "id": "sen-003",
+        "description": "Build de production dans /build",
+        "path": "build/",
+        "risk": "low",
+        "precautions": ["Ne pas versionner", "Le .gitignore exclut déjà /build"]
+      }
+    ],
+    "fragileZones": [
+      {
+        "id": "frz-001",
+        "description": "Lien incorrect dans la page de liste des assets: pointe vers /models/edit/{id} au lieu de /assets/edit/{id}",
+        "path": "src/routes/assets/+page.svelte (ligne 11)",
+        "impact": "Navigation cassée vers l'édition d'asset",
+        "severity": "medium",
+        "status": "introduit"
+      },
+      {
+        "id": "frz-002",
+        "description": "Lien d'édition sur la page d'accueil utilise model.id mais le type frontend utilise model.uuid",
+        "path": "src/routes/+page.svelte (ligne 14)",
+        "impact": "Le lien peut générer 'undefined' si le mapping n'est pas correct",
+        "severity": "medium",
+        "status": "non_resolu"
+      },
+      {
+        "id": "frz-003",
+        "description": "Pas de gestion d'erreur structurée dans les Tauri Commands (return String pour les erreurs)",
+        "path": "src-tauri/src/lib.rs",
+        "impact": "Les erreurs ne sont pas typées côté frontend",
+        "severity": "medium"
+      },
+      {
+        "id": "frz-004",
+        "description": "Pages de modèles (/models, /models/edit/[uuid]) toujours vides de logique métier",
+        "path": "src/routes/models/+page.svelte",
+        "impact": "Fonctionnalités non implémentées",
+        "severity": "high"
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "uuid": "dep-001",
+      "name": "@tauri-apps/api",
+      "version": "^2",
+      "type": "runtime",
+      "category": "frontend",
+      "critical": true,
+      "purpose": "Bridge IPC pour communiquer avec le backend Tauri",
+      "path": "node_modules/@tauri-apps/api"
+    },
+    {
+      "uuid": "dep-002",
+      "name": "@tauri-apps/plugin-opener",
+      "version": "^2",
+      "type": "runtime",
+      "category": "frontend",
+      "critical": false,
+      "purpose": "Plugin Tauri pour ouvrir des fichiers/URLs",
+      "path": "node_modules/@tauri-apps/plugin-opener"
+    },
+    {
+      "uuid": "dep-003",
+      "name": "@sveltejs/adapter-static",
+      "version": "^3.0.6",
+      "type": "dev",
+      "category": "frontend",
+      "critical": true,
+      "purpose": "Adaptateur SvelteKit pour génération statique (SPA)",
+      "path": "node_modules/@sveltejs/adapter-static"
+    },
+    {
+      "uuid": "dep-004",
+      "name": "@sveltejs/kit",
+      "version": "^2.9.0",
+      "type": "dev",
+      "category": "frontend",
+      "critical": true,
+      "purpose": "Framework SvelteKit pour le routage et le rendu",
+      "path": "node_modules/@sveltejs/kit"
+    },
+    {
+      "uuid": "dep-005",
+      "name": "@sveltejs/vite-plugin-svelte",
+      "version": "^5.0.0",
+      "type": "dev",
+      "category": "frontend",
+      "critical": true,
+      "purpose": "Plugin Vite pour la compilation Svelte",
+      "path": "node_modules/@sveltejs/vite-plugin-svelte"
+    },
+    {
+      "uuid": "dep-006",
+      "name": "svelte",
+      "version": "^5.0.0",
+      "type": "dev",
+      "category": "frontend",
+      "critical": true,
+      "purpose": "Framework UI Svelte version 5 avec runes",
+      "path": "node_modules/svelte"
+    },
+    {
+      "uuid": "dep-007",
+      "name": "svelte-check",
+      "version": "^4.0.0",
+      "type": "dev",
+      "category": "frontend",
+      "critical": false,
+      "purpose": "Outil de vérification de code Svelte",
+      "path": "node_modules/svelte-check"
+    },
+    {
+      "uuid": "dep-008",
+      "name": "typescript",
+      "version": "~5.6.2",
+      "type": "dev",
+      "category": "frontend",
+      "critical": true,
+      "purpose": "Langage TypeScript pour le typage statique",
+      "path": "node_modules/typescript"
+    },
+    {
+      "uuid": "dep-009",
+      "name": "vite",
+      "version": "^6.0.3",
+      "type": "dev",
+      "category": "build",
+      "critical": true,
+      "purpose": "Build tool et dev server",
+      "path": "node_modules/vite"
+    },
+    {
+      "uuid": "dep-010",
+      "name": "@tauri-apps/cli",
+      "version": "^2",
+      "type": "dev",
+      "category": "build",
+      "critical": true,
+      "purpose": "CLI Tauri pour le build et le développement",
+      "path": "node_modules/@tauri-apps/cli"
+    },
+    {
+      "uuid": "dep-011",
+      "name": "tauri (Rust)",
+      "version": "2",
+      "type": "runtime",
+      "category": "backend",
+      "critical": true,
+      "purpose": "Framework Tauri pour l'application desktop",
+      "path": "src-tauri/"
+    },
+    {
+      "uuid": "dep-012",
+      "name": "tauri-plugin-opener (Rust)",
+      "version": "2",
+      "type": "runtime",
+      "category": "backend",
+      "critical": false,
+      "purpose": "Plugin Rust pour ouvrir des fichiers/URLs",
+      "path": "src-tauri/Cargo.toml"
+    },
+    {
+      "uuid": "dep-013",
+      "name": "serde (Rust)",
+      "version": "1",
+      "type": "runtime",
+      "category": "backend",
+      "critical": true,
+      "purpose": "Framework de sérialisation/désérialisation Rust",
+      "features": ["derive"],
+      "path": "src-tauri/Cargo.toml"
+    },
+    {
+      "uuid": "dep-014",
+      "name": "serde_json (Rust)",
+      "version": "1",
+      "type": "runtime",
+      "category": "backend",
+      "critical": true,
+      "purpose": "Support JSON pour serde",
+      "path": "src-tauri/Cargo.toml"
+    },
+    {
+      "uuid": "dep-015",
+      "name": "sqlx (Rust)",
+      "version": "0.8",
+      "type": "runtime",
+      "category": "backend",
+      "critical": true,
+      "purpose": "ORM/Driver SQL asynchrone pour SQLite",
+      "features": ["runtime-tokio", "sqlite"],
+      "path": "src-tauri/Cargo.toml"
+    },
+    {
+      "uuid": "dep-016",
+      "name": "tauri-build (Rust)",
+      "version": "2",
+      "type": "build",
+      "category": "backend",
+      "critical": true,
+      "purpose": "Build script Tauri pour la compilation Rust",
+      "path": "src-tauri/Cargo.toml"
+    },
+    {
+      "uuid": "dep-017",
+      "name": "uuid (Rust)",
+      "version": "1.23.1",
+      "type": "runtime",
+      "category": "backend",
+      "critical": true,
+      "purpose": "Génération d'UUID v4 côté serveur pour les modèles et assets",
+      "features": ["v4"],
+      "path": "src-tauri/Cargo.toml",
+      "addedInScan": 2
+    }
+  ],
+  "dataModels": [
+    {
+      "uuid": "mdl-001",
+      "name": "Field (Frontend)",
+      "type": "TypeScript Type",
+      "source": "src/lib/types.ts",
+      "description": "Représente un champ typé d'un modèle de données",
+      "fields": [
+        { "name": "name", "type": "string", "required": true, "description": "Nom du champ" },
+        { "name": "type", "type": "'text' | 'number' | 'date'", "required": true, "description": "Type de données du champ", "enum": ["text", "number", "date"] }
+      ],
+      "sensitive": false
+    },
+    {
+      "uuid": "mdl-002",
+      "name": "FieldKind (Frontend)",
+      "type": "TypeScript Const Array",
+      "source": "src/lib/types.ts",
+      "description": "Constante énumérant les types de champ disponibles",
+      "values": ["text", "number", "date"],
+      "sensitive": false
+    },
+    {
+      "uuid": "mdl-003",
+      "name": "AssetField (Frontend)",
+      "type": "TypeScript Type",
+      "source": "src/lib/types.ts",
+      "description": "Représente la valeur d'un champ dans un asset",
+      "fields": [
+        { "name": "name", "type": "string", "required": true, "description": "Nom du champ" },
+        { "name": "value", "type": "any", "required": true, "description": "Valeur du champ (non typée, any explicite via biome-ignore)" }
+      ],
+      "sensitive": false,
+      "addedInScan": 2
+    },
+    {
+      "uuid": "mdl-004",
+      "name": "Model (Frontend)",
+      "type": "TypeScript Type",
+      "source": "src/lib/types.ts",
+      "description": "Représente un modèle de données avec ses champs",
+      "fields": [
+        { "name": "uuid", "type": "string", "required": true, "description": "Identifiant unique du modèle (UUID)" },
+        { "name": "name", "type": "string", "required": true, "description": "Nom du modèle" },
+        { "name": "fields", "type": "Field[]", "required": true, "description": "Liste des champs du modèle" }
+      ],
+      "sensitive": false,
+      "changesSinceLastScan": "Renommage de 'id' à 'uuid'"
+    },
+    {
+      "uuid": "mdl-005",
+      "name": "Asset (Frontend)",
+      "type": "TypeScript Type",
+      "source": "src/lib/types.ts",
+      "description": "Représente une instance concrète (asset) d'un modèle",
+      "fields": [
+        { "name": "id", "type": "string", "required": true, "description": "Identifiant unique de l'asset (UUID)" },
+        { "name": "name", "type": "string", "required": true, "description": "Nom de l'asset" },
+        { "name": "fields", "type": "AssetField[]", "required": true, "description": "Valeurs des champs de l'asset" }
+      ],
+      "sensitive": false,
+      "addedInScan": 2
+    },
+    {
+      "uuid": "mdl-006",
+      "name": "Model (Backend/Rust)",
+      "type": "Rust Struct",
+      "source": "src-tauri/src/lib.rs",
+      "description": "Représentation backend d'un modèle, mappée sur la table SQLite",
+      "fields": [
+        { "name": "uuid", "type": "String", "required": true, "description": "Identifiant unique (UUID v4 généré côté serveur)" },
+        { "name": "name", "type": "String", "required": true, "description": "Nom du modèle" },
+        { "name": "fields", "type": "serde_json::Value", "required": true, "description": "Champs au format JSON (sérialisé en TEXT en SQLite)" }
+      ],
+      "sensitive": false,
+      "derives": ["Debug", "Serialize", "sqlx::FromRow"]
+    },
+    {
+      "uuid": "mdl-007",
+      "name": "Asset (Backend/Rust)",
+      "type": "Rust Struct",
+      "source": "src-tauri/src/lib.rs",
+      "description": "Représentation backend d'un asset, mappée sur la table SQLite",
+      "fields": [
+        { "name": "uuid", "type": "String", "required": true, "description": "Identifiant unique (UUID v4 généré côté serveur)" },
+        { "name": "model_id", "type": "String", "required": true, "description": "UUID du modèle parent (clé étrangère)" },
+        { "name": "name", "type": "String", "required": true, "description": "Nom de l'asset" },
+        { "name": "fields", "type": "serde_json::Value", "required": true, "description": "Valeurs des champs au format JSON" }
+      ],
+      "sensitive": false,
+      "derives": ["Debug", "Serialize", "sqlx::FromRow"],
+      "addedInScan": 2
+    },
+    {
+      "uuid": "mdl-008",
+      "name": "assets (Table SQLite)",
+      "type": "SQL Table",
+      "source": "src-tauri/migrations/000_init.sql",
+      "description": "Table de persistance des assets (instances de modèles)",
+      "columns": [
+        { "name": "uuid", "type": "TEXT", "constraint": "PRIMARY KEY NOT NULL", "description": "Identifiant unique UUID" },
+        { "name": "model_id", "type": "TEXT", "constraint": "NOT NULL", "description": "UUID du modèle parent" },
+        { "name": "name", "type": "TEXT", "constraint": "NOT NULL", "description": "Nom de l'asset" },
+        { "name": "fields", "type": "TEXT", "constraint": "NOT NULL", "description": "JSON représentant les valeurs des champs" }
+      ],
+      "foreignKeys": [
+        { "column": "model_id", "references": "models(uuid)" }
+      ],
+      "sensitive": false,
+      "migration": "000_init.sql (étendue)",
+      "addedInScan": 2
+    },
+    {
+      "uuid": "mdl-009",
+      "name": "AppData (Rust)",
+      "type": "Rust Struct",
+      "source": "src-tauri/src/lib.rs",
+      "description": "État partagé de l'application Tauri contenant la connexion à la base de données",
+      "fields": [
+        { "name": "pool", "type": "SqlitePool", "required": true, "description": "Pool de connexions SQLite (sqlx)" }
+      ],
+      "sensitive": false
+    }
+  ],
+  "routes": [
+    {
+      "uuid": "rte-001",
+      "path": "/",
+      "method": "GET",
+      "type": "page",
+      "description": "Page d'accueil listant les modèles avec liens de navigation",
+      "frontend": {
+        "files": [
+          { "path": "src/routes/+layout.svelte", "role": "Layout principal (passe les enfants)" },
+          { "path": "src/routes/+layout.ts", "role": "Configuration désactivant le SSR" },
+          { "path": "src/routes/+page.svelte", "role": "Composant page d'accueil" },
+          { "path": "src/routes/+page.ts", "role": "Chargeur de données (appelle get_models)" }
+        ],
+        "inputs": [],
+        "output": {
+          "type": "PageProps",
+          "fields": [
+            { "name": "data.models", "type": "Model[]", "description": "Liste des modèles affichée dans la page" }
+          ]
+        }
+      },
+      "backend": {
+        "command": "get_models",
+        "description": "Récupère tous les modèles depuis SQLite",
+        "inputs": [],
+        "output": {
+          "type": "Vec<Model>",
+          "description": "Tableau de Model (uuid, name, fields)"
+        }
+      },
+      "errors": [
+        { "code": "ERR_DB_FETCH", "description": "Erreur lors de la récupération des modèles depuis SQLite", "httpEquivalent": 500 }
+      ],
+      "links": [
+        { "to": "/assets/create", "label": "Ajouter un asset" },
+        { "to": "/assets", "label": "liste des assets" },
+        { "to": "/models", "label": "liste des models" },
+        { "to": "/models/create", "label": "Ajouter un model" },
+        { "to": "/models/edit/{uuid}", "label": "éditer un model (dynamique)" }
+      ],
+      "changesSinceLastScan": "Lien /assets/add → /assets/create"
+    },
+    {
+      "uuid": "rte-002",
+      "path": "/assets",
+      "method": "GET",
+      "type": "page",
+      "description": "Page de liste des assets avec chargement de données",
+      "frontend": {
+        "files": [
+          { "path": "src/routes/assets/+page.svelte", "role": "Page liste assets avec boucle d'affichage" },
+          { "path": "src/routes/assets/+page.ts", "role": "Chargeur de données (appelle get_assets)" }
+        ],
+        "inputs": [],
+        "output": {
+          "type": "PageProps",
+          "fields": [
+            { "name": "data.assets", "type": "Asset[]", "description": "Liste des assets" }
+          ]
+        }
+      },
+      "backend": {
+        "command": "get_assets",
+        "description": "Récupère tous les assets depuis SQLite",
+        "inputs": [],
+        "output": {
+          "type": "Vec<Asset>",
+          "description": "Tableau d'Asset (uuid, model_id, name, fields)"
+        }
+      },
+      "errors": [
+        { "code": "ERR_DB_FETCH", "description": "Erreur lors de la récupération des assets", "httpEquivalent": 500 }
+      ],
+      "links": [
+        { "to": "/", "label": "Retour" }
+      ],
+      "changesSinceLastScan": "Implémenté (était placeholder)",
+      "anomalies": [
+        { "type": "wrong_link", "description": "Le lien 'éditer' pointe vers /models/edit/{id} au lieu de /assets/edit/{id}", "severity": "medium", "line": 11 }
+      ]
+    },
+    {
+      "uuid": "rte-003",
+      "path": "/assets/create",
+      "method": "GET",
+      "type": "page",
+      "description": "Page de création d'un asset avec sélection du modèle parent",
+      "frontend": {
+        "files": [
+          { "path": "src/routes/assets/create/+page.svelte", "role": "Formulaire de création d'asset avec select model" },
+          { "path": "src/routes/assets/create/+page.ts", "role": "Chargeur de données (liste les modèles pour le select)" }
+        ],
+        "inputs": [
+          { "name": "name", "type": "string", "source": "form input", "description": "Nom de l'asset" },
+          { "name": "selectedModelId", "type": "string", "source": "form select", "description": "UUID du modèle parent" }
+        ],
+        "output": null
+      },
+      "backend": {
+        "command": "create_asset",
+        "description": "Crée un nouvel asset dans SQLite",
+        "inputs": [
+          { "name": "name", "type": "string", "description": "Nom de l'asset" },
+          { "name": "model_id", "type": "string", "description": "UUID du modèle parent" },
+          { "name": "fields", "type": "serde_json::Value", "description": "Valeurs des champs (actuellement vide [])" }
+        ],
+        "output": {
+          "type": "Asset",
+          "description": "L'asset créé avec uuid, model_id, name, fields"
+        }
+      },
+      "errors": [
+        { "code": "ERR_DB_INSERT", "description": "Erreur lors de l'insertion en base de données", "httpEquivalent": 500 },
+        { "code": "ERR_FK_VIOLATION", "description": "Le model_id ne correspond à aucun modèle existant", "httpEquivalent": 500 }
+      ],
+      "links": [
+        { "to": "/", "label": "Retour" }
+      ],
+      "changesSinceLastScan": "Nouvelle route (remplace /assets/add)"
+    },
+    {
+      "uuid": "rte-004",
+      "path": "/assets/edit/[uuid]",
+      "method": "GET",
+      "type": "page",
+      "description": "Page d'édition d'un asset par UUID (non implémentée)",
+      "parameters": [
+        { "name": "uuid", "type": "string", "in": "path", "required": true, "description": "UUID de l'asset à éditer" }
+      ],
+      "frontend": {
+        "files": [
+          { "path": "src/routes/assets/edit/[uuid]/+page.svelte", "role": "Page d'édition d'asset - contient seulement un lien retour" }
+        ],
+        "inputs": [
+          { "name": "uuid", "type": "string", "source": "paramètre de route" }
+        ],
+        "output": null,
+        "status": "placeholder"
+      },
+      "backend": null,
+      "errors": [],
+      "links": [
+        { "to": "/", "label": "Retour" }
+      ]
+    },
+    {
+      "uuid": "rte-005",
+      "path": "/models",
+      "method": "GET",
+      "type": "page",
+      "description": "Page de liste des modèles (non implémentée)",
+      "frontend": {
+        "files": [
+          { "path": "src/routes/models/+page.svelte", "role": "Page liste modèles - contient seulement un lien retour" }
+        ],
+        "inputs": [],
+        "output": null,
+        "status": "placeholder"
+      },
+      "backend": null,
+      "errors": [],
+      "links": [
+        { "to": "/", "label": "Retour" }
+      ]
+    },
+    {
+      "uuid": "rte-006",
+      "path": "/models/create",
+      "method": "GET",
+      "type": "page",
+      "description": "Page de création d'un modèle avec formulaire (UUID généré côté serveur)",
+      "frontend": {
+        "files": [
+          { "path": "src/routes/models/create/+page.svelte", "role": "Formulaire de création de modèle" }
+        ],
+        "inputs": [
+          { "name": "name", "type": "string", "source": "form input", "description": "Nom du modèle saisi par l'utilisateur" }
+        ],
+        "output": null
+      },
+      "backend": {
+        "command": "create_model",
+        "description": "Crée un nouveau modèle dans SQLite (UUID généré côté serveur)",
+        "inputs": [
+          { "name": "name", "type": "string", "description": "Nom du modèle" },
+          { "name": "fields", "type": "serde_json::Value", "description": "Tableau de champs (actuellement vide [])" }
+        ],
+        "output": {
+          "type": "Model",
+          "description": "Le modèle créé avec uuid, name, fields"
+        }
+      },
+      "errors": [
+        { "code": "ERR_DB_INSERT", "description": "Erreur lors de l'insertion en base de données", "httpEquivalent": 500 }
+      ],
+      "links": [
+        { "to": "/", "label": "Retour" }
+      ],
+      "changesSinceLastScan": "L'UUID n'est plus passé par le frontend, généré côté serveur via uuid::Uuid::new_v4()"
+    },
+    {
+      "uuid": "rte-007",
+      "path": "/models/edit/[uuid]",
+      "method": "GET",
+      "type": "page",
+      "description": "Page d'édition d'un modèle par UUID (non implémentée). Typo [uiid] corrigée en [uuid].",
+      "parameters": [
+        { "name": "uuid", "type": "string", "in": "path", "required": true, "description": "UUID du modèle à éditer" }
+      ],
+      "frontend": {
+        "files": [
+          { "path": "src/routes/models/edit/[uuid]/+page.svelte", "role": "Page d'édition de modèle - contient seulement un lien retour" }
+        ],
+        "inputs": [
+          { "name": "uuid", "type": "string", "source": "paramètre de route" }
+        ],
+        "output": null,
+        "status": "placeholder"
+      },
+      "backend": null,
+      "errors": [],
+      "links": [
+        { "to": "/", "label": "retour" }
+      ],
+      "changesSinceLastScan": "✅ Typo [uiid] → [uuid] corrigée"
+    }
+  ],
+  "apiEndpoints": [
+    {
+      "uuid": "api-001",
+      "name": "get_models",
+      "type": "tauri_command",
+      "method": "invoke (IPC)",
+      "path": "src-tauri/src/lib.rs",
+      "description": "Récupère la liste complète des modèles depuis SQLite",
+      "inputs": [],
+      "output": { "type": "Vec<Model>", "structure": "Tableau d'objets { uuid: string, name: string, fields: JSON }" },
+      "errors": [
+        { "code": "string_error", "description": "Erreur SQL renvoyée sous forme de String", "scenario": "Échec de la requête SQL SELECT" }
+      ],
+      "complexity": { "score": 0.3, "confidence": 0.9 }
+    },
+    {
+      "uuid": "api-002",
+      "name": "create_model",
+      "type": "tauri_command",
+      "method": "invoke (IPC)",
+      "path": "src-tauri/src/lib.rs",
+      "description": "Crée un nouveau modèle dans SQLite avec UUID généré côté serveur",
+      "inputs": [
+        { "name": "name", "type": "string", "description": "Nom du modèle" },
+        { "name": "fields", "type": "serde_json::Value", "description": "Champs du modèle au format JSON" }
+      ],
+      "output": { "type": "Model", "structure": "Objet { uuid: string, name: string, fields: JSON }" },
+      "errors": [
+        { "code": "string_error", "description": "Erreur SQL renvoyée sous forme de String", "scenario": "Échec de la requête SQL INSERT" }
+      ],
+      "complexity": { "score": 0.4, "confidence": 0.9 },
+      "changesSinceLastScan": "Le paramètre 'uuid' n'est plus accepté ; l'UUID est généré côté serveur via uuid::Uuid::new_v4()"
+    },
+    {
+      "uuid": "api-003",
+      "name": "get_assets",
+      "type": "tauri_command",
+      "method": "invoke (IPC)",
+      "path": "src-tauri/src/lib.rs",
+      "description": "Récupère la liste complète des assets depuis SQLite",
+      "inputs": [],
+      "output": { "type": "Vec<Asset>", "structure": "Tableau d'objets { uuid: string, model_id: string, name: string, fields: JSON }" },
+      "errors": [
+        { "code": "string_error", "description": "Erreur SQL renvoyée sous forme de String", "scenario": "Échec de la requête SQL SELECT" }
+      ],
+      "complexity": { "score": 0.3, "confidence": 0.9 },
+      "addedInScan": 2
+    },
+    {
+      "uuid": "api-004",
+      "name": "create_asset",
+      "type": "tauri_command",
+      "method": "invoke (IPC)",
+      "path": "src-tauri/src/lib.rs",
+      "description": "Crée un nouvel asset dans SQLite avec UUID généré côté serveur",
+      "inputs": [
+        { "name": "name", "type": "string", "description": "Nom de l'asset" },
+        { "name": "model_id", "type": "string", "description": "UUID du modèle parent" },
+        { "name": "fields", "type": "serde_json::Value", "description": "Valeurs des champs au format JSON" }
+      ],
+      "output": { "type": "Asset", "structure": "Objet { uuid: string, model_id: string, name: string, fields: JSON }" },
+      "errors": [
+        { "code": "string_error", "description": "Erreur SQL renvoyée sous forme de String", "scenario": "Échec de la requête SQL INSERT ou violation FK" }
+      ],
+      "complexity": { "score": 0.4, "confidence": 0.9 },
+      "addedInScan": 2
+    }
+  ],
+  "businessRules": [
+    {
+      "uuid": "bru-001",
+      "name": "Génération d'UUID côté serveur",
+      "description": "L'UUID des modèles et assets est généré côté serveur Rust via uuid::Uuid::new_v4(). Le frontend n'envoie plus d'UUID.",
+      "criticality": "high",
+      "source": "src-tauri/src/lib.rs (lignes 51, 74)",
+      "rationale": "Centralisation de la génération d'identifiants, évite les conflits et la manipulation côté client",
+      "changesSinceLastScan": "Anciennement généré côté client via crypto.randomUUID()"
+    },
+    {
+      "uuid": "bru-002",
+      "name": "Création automatique de la base de données",
+      "description": "Au démarrage de l'application, la base de données SQLite est créée automatiquement dans le dossier app_data_dir() si elle n'existe pas, et les migrations sont exécutées.",
+      "criticality": "high",
+      "source": "src-tauri/src/lib.rs (fonction connect_database)",
+      "rationale": "Assure un démarrage sans configuration manuelle pour l'utilisateur"
+    },
+    {
+      "uuid": "bru-003",
+      "name": "Relation modèle-asset (clé étrangère)",
+      "description": "Un asset est toujours lié à un modèle parent via model_id. La contrainte FOREIGN KEY est définie en base de données. La création d'un asset nécessite un modèle existant.",
+      "criticality": "high",
+      "source": "src-tauri/migrations/000_init.sql (ligne 11), src/routes/assets/create/+page.svelte",
+      "rationale": "Assure l'intégrité référentielle entre les assets et leurs modèles"
+    }
+  ],
+  "actionsSequences": [
+    {
+      "uuid": "seq-001",
+      "name": "Création d'un modèle",
+      "steps": [
+        { "order": 1, "action": "L'utilisateur navigue vers /models/create", "type": "navigation" },
+        { "order": 2, "action": "L'utilisateur saisit un nom dans le champ input", "type": "user_input" },
+        { "order": 3, "action": "L'utilisateur clique sur 'Ajouter'", "type": "user_action" },
+        { "order": 4, "action": "Le frontend appelle invoke('create_model', { name, fields: [] })", "type": "ipc_call" },
+        { "order": 5, "action": "Le backend Rust génère un UUID via uuid::Uuid::new_v4()", "type": "computation", "location": "src-tauri/src/lib.rs" },
+        { "order": 6, "action": "Le backend exécute INSERT INTO models ... RETURNING *", "type": "database_write" },
+        { "order": 7, "action": "Le modèle créé est retourné au frontend", "type": "response" }
+      ],
+      "trigger": "Soumission du formulaire de création de modèle",
+      "actors": ["Utilisateur", "Frontend Svelte", "Backend Rust", "SQLite"],
+      "changesSinceLastScan": "L'UUID est maintenant généré côté serveur (étape 5 ajoutée)"
+    },
+    {
+      "uuid": "seq-002",
+      "name": "Chargement de la page d'accueil",
+      "steps": [
+        { "order": 1, "action": "L'utilisateur navigue vers /", "type": "navigation" },
+        { "order": 2, "action": "Le layout SvelteKit charge (+layout.ts configure SSR=false)", "type": "configuration" },
+        { "order": 3, "action": "Le loader +page.ts s'exécute", "type": "data_loading" },
+        { "order": 4, "action": "Le loader appelle invoke('get_models')", "type": "ipc_call" },
+        { "order": 5, "action": "Le backend Rust exécute SELECT * FROM models", "type": "database_read" },
+        { "order": 6, "action": "Les modèles sont retournés au frontend", "type": "response" },
+        { "order": 7, "action": "La page affiche la liste des modèles avec leurs liens d'édition", "type": "render" }
+      ],
+      "trigger": "Navigation vers la page d'accueil",
+      "actors": ["Utilisateur", "Frontend Svelte", "Backend Rust", "SQLite"]
+    },
+    {
+      "uuid": "seq-003",
+      "name": "Création d'un asset",
+      "steps": [
+        { "order": 1, "action": "L'utilisateur navigue vers /assets/create", "type": "navigation" },
+        { "order": 2, "action": "Le loader +page.ts s'exécute et charge les modèles via invoke('get_models')", "type": "data_loading" },
+        { "order": 3, "action": "La page affiche un formulaire avec un champ nom et un select de modèles", "type": "render" },
+        { "order": 4, "action": "L'utilisateur saisit un nom et sélectionne un modèle", "type": "user_input" },
+        { "order": 5, "action": "L'utilisateur clique sur 'Ajouter'", "type": "user_action" },
+        { "order": 6, "action": "Le frontend appelle invoke('create_asset', { name, modelId, fields: [] })", "type": "ipc_call" },
+        { "order": 7, "action": "Le backend Rust génère un UUID via uuid::Uuid::new_v4()", "type": "computation" },
+        { "order": 8, "action": "Le backend exécute INSERT INTO assets ... RETURNING *", "type": "database_write" },
+        { "order": 9, "action": "L'asset créé est retourné au frontend", "type": "response" }
+      ],
+      "trigger": "Soumission du formulaire de création d'asset",
+      "actors": ["Utilisateur", "Frontend Svelte", "Backend Rust", "SQLite"],
+      "addedInScan": 2
+    }
+  ],
+  "dependencyGraph": {
+    "nodes": [
+      { "uuid": "dep-001", "label": "@tauri-apps/api ^2" },
+      { "uuid": "dep-002", "label": "@tauri-apps/plugin-opener ^2" },
+      { "uuid": "dep-003", "label": "@sveltejs/adapter-static ^3.0.6" },
+      { "uuid": "dep-004", "label": "@sveltejs/kit ^2.9.0" },
+      { "uuid": "dep-005", "label": "@sveltejs/vite-plugin-svelte ^5.0.0" },
+      { "uuid": "dep-006", "label": "svelte ^5.0.0" },
+      { "uuid": "dep-007", "label": "svelte-check ^4.0.0" },
+      { "uuid": "dep-008", "label": "typescript ~5.6.2" },
+      { "uuid": "dep-009", "label": "vite ^6.0.3" },
+      { "uuid": "dep-010", "label": "@tauri-apps/cli ^2" },
+      { "uuid": "dep-011", "label": "tauri 2 (Rust)" },
+      { "uuid": "dep-012", "label": "tauri-plugin-opener 2 (Rust)" },
+      { "uuid": "dep-013", "label": "serde 1 (Rust)" },
+      { "uuid": "dep-014", "label": "serde_json 1 (Rust)" },
+      { "uuid": "dep-015", "label": "sqlx 0.8 (Rust)" },
+      { "uuid": "dep-016", "label": "tauri-build 2 (Rust)" },
+      { "uuid": "dep-017", "label": "uuid 1.23.1 (Rust)" }
+    ],
+    "edges": [
+      { "from": "dep-004", "to": "dep-006", "type": "depends_on", "description": "@sveltejs/kit dépend de svelte" },
+      { "from": "dep-004", "to": "dep-009", "type": "depends_on", "description": "@sveltejs/kit dépend de vite" },
+      { "from": "dep-005", "to": "dep-006", "type": "depends_on", "description": "@sveltejs/vite-plugin-svelte dépend de svelte" },
+      { "from": "dep-005", "to": "dep-009", "type": "depends_on", "description": "@sveltejs/vite-plugin-svelte dépend de vite" },
+      { "from": "dep-003", "to": "dep-004", "type": "depends_on", "description": "adapter-static dépend de @sveltejs/kit" },
+      { "from": "dep-007", "to": "dep-006", "type": "depends_on", "description": "svelte-check dépend de svelte" },
+      { "from": "dep-001", "to": "dep-011", "type": "communicates_with", "description": "@tauri-apps/api communique avec Tauri via IPC" },
+      { "from": "dep-010", "to": "dep-011", "type": "builds", "description": "@tauri-apps/cli build le backend Tauri" },
+      { "from": "dep-011", "to": "dep-015", "type": "depends_on", "description": "Tauri utilise sqlx pour SQLite" },
+      { "from": "dep-011", "to": "dep-013", "type": "depends_on", "description": "Tauri utilise serde pour la sérialisation" },
+      { "from": "dep-011", "to": "dep-014", "type": "depends_on", "description": "Tauri utilise serde_json pour le JSON" },
+      { "from": "dep-011", "to": "dep-012", "type": "depends_on", "description": "Tauri utilise le plugin opener" },
+      { "from": "dep-011", "to": "dep-017", "type": "depends_on", "description": "Tauri utilise uuid pour générer des UUID v4" },
+      { "from": "dep-016", "to": "dep-011", "type": "build_depends_on", "description": "tauri-build est utilisé pour builder Tauri" },
+      { "from": "dep-011", "to": "dep-009", "type": "serves", "description": "Tauri sert le frontend buildé par Vite" }
+    ],
+    "meta": {
+      "description": "Graphe des dépendances entre les composants du projet. Les dépendances npm sont en frontend/build, les dépendances Cargo en backend.",
+      "addedNodesSinceLastScan": ["dep-017 (uuid 1.23.1)"]
+    }
+  },
+  "lexicon": {
+    "terms": [
+      {
+        "term": "Modèle (Model)",
+        "definition": "Structure de données définie par l'utilisateur, composée de champs typés (text, number, date). Chaque modèle possède un UUID unique et un nom."
+      },
+      {
+        "term": "Asset",
+        "definition": "Instance concrète d'un modèle de données. Représente une entrée avec des valeurs pour chaque champ du modèle associé. Lié à un modèle via model_id (FK)."
+      },
+      {
+        "term": "Champ (Field)",
+        "definition": "Propriété typée d'un modèle. Peut être de type 'text', 'number' ou 'date'."
+      },
+      {
+        "term": "Tauri Command",
+        "definition": "Fonction Rust exposée au frontend via l'IPC de Tauri. Appelée avec invoke() depuis JavaScript."
+      },
+      {
+        "term": "SPA (Single Page Application)",
+        "definition": "Mode de fonctionnement où tout le rendu est fait côté client. Le SSR est désactivé car Tauri n'a pas de serveur Node.js."
+      },
+      {
+        "term": "Runes (Svelte 5)",
+        "definition": "Système de réactivité de Svelte 5 utilisant $state, $props, $derived, $effect au lieu des stores Svelte 4."
+      }
+    ]
+  },
+  "audit": {
+    "summary": {
+      "totalFiles": 19,
+      "implementedFeatures": 4,
+      "placeholderFeatures": 3,
+      "anomalies": 3,
+      "fixedIssues": 1,
+      "missingTests": true,
+      "missingDocumentation": true
+    },
+    "changesSinceLastScan": {
+      "fixed": [
+        "✅ Typo 'uiid' → 'uuid' dans /models/edit/[uuid]"
+      ],
+      "newIssues": [
+        "❌ Lien incorrect dans /assets : pointe vers /models/edit/{id} au lieu de /assets/edit/{id}",
+        "❌ Lien d'édition sur l'accueil utilise model.id (inexistant) au lieu de model.uuid"
+      ],
+      "improvements": [
+        "✅ Implémentation de /assets/create avec formulaire et chargement des modèles",
+        "✅ Implémentation de /assets avec listing des assets",
+        "✅ Nouveaux endpoints API : get_assets, create_asset",
+        "✅ Génération d'UUID déplacée côté serveur (plus robuste)",
+        "✅ Table assets créée en migration avec FK vers models",
+        "✅ Dépendance uuid crate ajoutée"
+      ]
+    },
+    "missingFields": [
+      {
+        "field": "routes[].dataLoading",
+        "location": "src/routes/models/+page.svelte",
+        "description": "La page de liste des modèles n'a pas de chargeur de données",
+        "impact": "La liste est vide",
+        "suggestion": "Ajouter une load function avec invoke('get_models')"
+      },
+      {
+        "field": "errors.structured",
+        "location": "src-tauri/src/lib.rs",
+        "description": "Les erreurs sont des String non structurées",
+        "impact": "Difficile de gérer les erreurs côté frontend",
+        "suggestion": "Créer un enum d'erreurs avec thiserror ou implémenter des codes d'erreur"
+      },
+      {
+        "field": "models[].fields[].validation",
+        "location": "src/routes/models/create/+page.svelte",
+        "description": "Pas de validation du champ name avant envoi",
+        "impact": "Un nom vide peut être envoyé",
+        "suggestion": "Ajouter une validation (required, minLength)"
+      },
+      {
+        "field": "assets[].fields[].validation",
+        "location": "src/routes/assets/create/+page.svelte",
+        "description": "Pas de validation des champs name et selectedModelId",
+        "impact": "Un nom vide ou un modèle non sélectionné peut être envoyé",
+        "suggestion": "Ajouter une validation (required sur name et selectedModelId)"
+      },
+      {
+        "field": "tests",
+        "location": "tests/",
+        "description": "Aucun test défini",
+        "impact": "Aucune couverture de test",
+        "suggestion": "Ajouter des tests avec vitest pour le frontend et cargo test pour le backend"
+      }
+    ],
+    "unnecessaryFields": [],
+    "optimizations": [
+      {
+        "type": "code_quality",
+        "description": "Corriger le lien d'édition dans src/routes/assets/+page.svelte (ligne 11): remplacer '/models/edit/{asset.id}' par '/assets/edit/{asset.id}'",
+        "rationale": "Lien actuel incohérent pointe vers la mauvaise route",
+        "priority": "high"
+      },
+      {
+        "type": "code_quality",
+        "description": "Corriger le lien d'édition dans src/routes/+page.svelte (ligne 14): remplacer 'model.id' par 'model.uuid'",
+        "rationale": "Le champ id a été renommé en uuid dans le type Model",
+        "priority": "high"
+      },
+      {
+        "type": "code_quality",
+        "description": "Supprimer les console.log() de production",
+        "rationale": "Les logs de debug ne devraient pas être en production",
+        "priority": "medium"
+      },
+      {
+        "type": "architecture",
+        "description": "Implémenter les pages restantes : /models, /models/edit/[uuid], /assets/edit/[uuid]",
+        "rationale": "3 routes sont encore des placeholders",
+        "priority": "high"
+      },
+      {
+        "type": "maintainability",
+        "description": "Ajouter un système de typage partagé entre frontend et backend (ex: typescript-json-schema)",
+        "rationale": "Les types sont définis des deux côtés sans synchronisation automatique",
+        "priority": "medium"
+      },
+      {
+        "type": "security",
+        "description": "Remplacer le type 'any' de AssetField.value par un type union 'string | number | date'",
+        "rationale": "Le any explicite est dangereux, les types de champ sont connus (text, number, date)",
+        "priority": "medium"
+      }
+    ],
+    "recommendations": [
+      "✅ Déjà fait: Corriger la typo 'uiid' en 'uuid' (fait)",
+      "❌ À faire: Corriger le lien dans assets/+page.svelte (/models/edit → /assets/edit)",
+      "❌ À faire: Corriger model.id → model.uuid dans +page.svelte",
+      "❌ À faire: Implémenter les pages restantes (models list, model edit, asset edit)",
+      "❌ À faire: Ajouter des types d'erreur structurés avec thiserror en Rust",
+      "❌ À faire: Ajouter une validation de formulaire côté frontend",
+      "❌ À faire: Mettre en place des tests automatisés (vitest + cargo test)",
+      "❌ À faire: Configurer ESLint/Prettier pour le code TypeScript",
+      "❌ À faire: Remplacer le 'any' de AssetField.value par un type spécifique"
+    ]
+  }
+}
