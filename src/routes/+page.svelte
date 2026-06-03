@@ -11,6 +11,6 @@
 
 <ul>
     {#each data.models as model}
-        <li>{model.name} - <a href="/models/edit/{model.id}">editer</a></li>
+        <li>{model.name} - <a href="/models/edit/{model.uuid}">editer</a></li>
     {/each}
 </ul>

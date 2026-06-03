@@ -8,6 +8,6 @@
 
 <ul>
     {#each data.assets as asset}
-        <li>{asset.name} - <a href="/models/edit/{asset.id}">editer</a></li>
+        <li>{asset.name} - <a href="/assets/edit/{asset.uuid}">editer</a></li>
     {/each}
 </ul>

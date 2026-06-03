@@ -1,13 +1,13 @@
+import type { Model } from "$lib/types";
 import { invoke } from "@tauri-apps/api/core";
 import type { PageLoad } from "./$types";
-import type { Model } from "$lib/types";
 import { error } from "@sveltejs/kit";
 
-export const load: PageLoad = async () => {
+export const load: PageLoad = async ({ params }) => {
 	try {
-		const models = await invoke<Model[]>("get_models");
+		const model = await invoke<Model>("get_model", { uuid: params.uuid });
 		return {
-			models,
+			model,
 		};
 	} catch (err) {
 		console.error(err);
