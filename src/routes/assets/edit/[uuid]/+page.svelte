@@ -2,20 +2,24 @@
     import { invoke } from "@tauri-apps/api/core";
     import type { PageProps } from "./$types";
     import { goto } from "$app/navigation";
-    import { validInput } from "$lib/validation";
     let { data }: PageProps = $props();
     const asset = $state(data.asset);
 
+    const addField = () => {
+        asset.fields.push({
+            name: "",
+            kind: "text",
+            value: "",
+            asset_id: asset.uuid,
+        });
+    };
+
     const saveAsset = async (event: SubmitEvent) => {
         event.preventDefault();
-        for (const modelField of asset.model_fields) {
-            for (const field of asset.fields) {
-                validInput(modelField.kind, field.value);
-            }
-        }
-        await invoke("update_asset_fields", {
+        await invoke("update_asset", {
             uuid: asset.uuid,
-            new_fields: asset.fields,
+            name: asset.name,
+            fields: asset.fields,
         });
     };
     const deleteAsset = async () => {
@@ -33,16 +37,29 @@
 
 <a href="/">Retour</a>
 
-<button onclick={deleteAsset}>Supprimer</button>
-
-<span>{asset?.name}</span>
-
 <form onsubmit={saveAsset}>
-    {#each asset.model_fields as field, index}
-        <label
-            >{field.name}
-            <input type={field.kind} value={asset.fields[index].value} /></label
-        >
-    {/each}
-    <button>sauvegarder</button>
+    <button type="button" onclick={deleteAsset}>Supprimer</button>
+    <label for="asset_name">Nom :</label>
+    <input type="text" id="asset_name" bind:value={asset.name} />
+    <li>
+        {#each asset.fields as field, index}
+            <ul>
+                <label for={`field_name_${index}`}>Nom :</label>
+                <input
+                    type="text"
+                    id={`field_name_${index}`}
+                    bind:value={field.name}
+                />
+                <label for={`field_kind_${index}`}>Type : </label>
+                <select bind:value={field.kind} id={`field_kind_${index}`}>
+                    <option value="text">Texte</option>
+                    <option value="number">Nombre</option>
+                    <option value="date">Date</option>
+                </select>
+                <input type={field.kind} bind:value={field.value} />
+            </ul>
+        {/each}
+        <button type="button" onclick={addField}>Ajouter un champ</button>
+    </li>
+    <button>Sauvegarder</button>
 </form>

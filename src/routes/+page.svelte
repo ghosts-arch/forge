@@ -6,11 +6,9 @@
 
 <a href="/assets/create">Ajouter un asset</a>
 <a href="/assets">liste des assets</a>
-<a href="/models/create">Ajouter un model</a>
-<a href="/models">liste des models</a>
 
 <ul>
-    {#each data.models as model}
-        <li>{model.name} - <a href="/models/edit/{model.uuid}">editer</a></li>
+    {#each data.assets as asset}
+        <li>{asset.name} - <a href="/assets/edit/{asset.uuid}">editer</a></li>
     {/each}
 </ul>

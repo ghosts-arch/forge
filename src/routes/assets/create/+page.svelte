@@ -1,17 +1,16 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/core";
     import type { PageProps } from "./$types";
+    import { goto } from "$app/navigation";
+    import type { Asset } from "$lib/types";
 
-    let { data }: PageProps = $props();
     let name = $state("");
-    let selectedModelId = $state("");
     const createAsset = async (event: SubmitEvent) => {
         event.preventDefault();
-        const asset = await invoke("create_asset", {
+        const asset: Asset = await invoke("create_asset", {
             name,
-            modelId: selectedModelId,
-            fields: [],
         });
+        goto(`/assets/edit/${asset.uuid}`);
     };
 </script>
 
@@ -19,10 +18,5 @@
 
 <form onsubmit={createAsset}>
     <input bind:value={name} />
-    <select bind:value={selectedModelId}>
-        {#each data.models as model}
-            <option value={model.uuid}>{model.name} </option>
-        {/each}
-    </select>
     <button>Ajouter</button>
 </form>
