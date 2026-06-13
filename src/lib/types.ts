@@ -1,12 +1,16 @@
-import type { HTMLInputTypeAttribute } from "svelte/elements";
 import type { validInput } from "./validation";
 
-export const FieldKind = ["text", "number", "date"] as const;
+export enum FieldKind {
+	TEXT = "text",
+	NUMBER = "number",
+	DATE = "date",
+}
 
 export type AssetField = {
+	uuid?: string;
 	asset_id: string;
 	name: string;
-	kind: HTMLInputTypeAttribute;
+	kind: FieldKind;
 	value: ReturnType<typeof validInput>;
 };
 
@@ -15,3 +19,13 @@ export type Asset = {
 	name: string;
 	fields: AssetField[];
 };
+
+export type Relation = {
+	uuid: string;
+	description: string;
+	source_asset_uuid: string;
+	target_asset_uuid: string;
+	name: string;
+};
+
+export type AssetInformations = Pick<Asset, "name" | "uuid">;

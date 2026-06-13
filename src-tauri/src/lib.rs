@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use tauri::State;
 
 mod assets;
+mod relations;
 mod types;
 
 #[tauri::command]
@@ -49,6 +50,62 @@ async fn delete_asset(state: State<'_, types::AppData>, uuid: String) -> Result<
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn search_assets(
+    state: State<'_, types::AppData>,
+    query: String,
+) -> Result<Vec<types::Asset>, String> {
+    assets::search_assets(&state.pool, query)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_relations(
+    state: State<'_, types::AppData>,
+) -> Result<Vec<types::AssetInformations>, String> {
+    relations::get_relations(&state.pool)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn create_relation(
+    state: State<'_, types::AppData>,
+    source_asset_uuid: String,
+    target_asset_uuid: String,
+    description: String,
+) -> Result<types::Relation, String> {
+    relations::create_relation(
+        &state.pool,
+        source_asset_uuid,
+        target_asset_uuid,
+        description,
+    )
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_relations_for(
+    state: State<'_, types::AppData>,
+    source: String,
+) -> Result<Vec<types::Relation>, String> {
+    relations::get_relations_for(&state.pool, source)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_relations_from(
+    state: State<'_, types::AppData>,
+    source: String,
+) -> Result<Vec<types::Relation>, String> {
+    relations::get_relations_from(&state.pool, source)
+        .await
+        .map_err(|e| e.to_string())
+}
+
 async fn connect_database(path: PathBuf) -> SqlitePool {
     let options = sqlx::sqlite::SqliteConnectOptions::new()
         .filename(path)
@@ -75,7 +132,12 @@ pub fn run() {
             get_assets,
             get_asset,
             update_asset,
-            delete_asset
+            delete_asset,
+            search_assets,
+            get_relations,
+            create_relation,
+            get_relations_for,
+            get_relations_from
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
