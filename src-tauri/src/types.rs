@@ -6,7 +6,7 @@ pub struct AppData {
     pub pool: SqlitePool,
 }
 
-#[derive(Debug, Deserialize, Serialize, sqlx::Type, Clone)]
+#[derive(Debug, Deserialize, Serialize, sqlx::Type, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum Kind {
     Text,
@@ -29,7 +29,7 @@ pub struct AssetInformations {
     pub name: String,
 }
 
-#[derive(Debug, Serialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, sqlx::FromRow, PartialEq)]
 pub struct Asset {
     pub uuid: String,
     pub name: String,
@@ -39,7 +39,7 @@ pub struct Asset {
     pub fields: Vec<AssetField>,
 }
 
-#[derive(Debug, Deserialize, Serialize, sqlx::FromRow)]
+#[derive(Debug, Deserialize, Serialize, sqlx::FromRow, PartialEq)]
 pub struct AssetField {
     pub uuid: String,
     pub asset_id: String,
@@ -52,7 +52,7 @@ pub struct AssetField {
     pub updated_at: i64,
 }
 
-#[derive(Debug, Deserialize, Serialize, sqlx::FromRow, Clone)]
+#[derive(Debug, Deserialize, Serialize, sqlx::FromRow, Clone, PartialEq)]
 pub struct AssetFieldPayload {
     pub uuid: Option<String>,
     pub asset_id: String,
