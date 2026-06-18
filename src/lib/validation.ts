@@ -10,18 +10,19 @@ export const DateSchema = v.pipe(
 );
 
 export const parseValidationSchema = {
-	text: TextSchema,
-	number: NumberSchema,
-	date: DateSchema,
+	[FieldKind.TEXT]: TextSchema,
+	[FieldKind.NUMBER]: NumberSchema,
+	[FieldKind.DATE]: DateSchema,
 };
 
 const isValidFieldKind = (
-	expectedType: string,
-): expectedType is (typeof FieldKind)[number] => {
-	return v.is(v.picklist(FieldKind), expectedType);
+	expectedType: FieldKind,
+)  => {
+	return v.is(v.enum(FieldKind), expectedType);
 };
 
-export const validInput = (expectedType: string, receivedValue: unknown) => {
-	if (!isValidFieldKind(expectedType)) throw Error();
+export const validInput = (expectedType: FieldKind, receivedValue: unknown) => {
+  console.log(expectedType, receivedValue);
+  if (!isValidFieldKind(expectedType)) throw Error();
 	return v.parse(parseValidationSchema[expectedType], receivedValue);
 };

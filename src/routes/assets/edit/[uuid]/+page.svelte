@@ -5,15 +5,24 @@
     import { goto } from "$app/navigation";
     import type { Asset, AssetInformations, Relation } from "$lib/types";
     import { FieldKind } from "$lib/types";
+    import { validInput } from "$lib/validation";
 
     let { data }: PageProps = $props();
     let asset = $derived(data.asset);
+    let relationsFor = $derived(data.relationsFor);
     let editedAsset: Asset | undefined = $state(undefined);
+    let editedRelationsFor: Relation[] | undefined = $state(undefined);
     $effect(() => {
         editedAsset = asset;
+        editedRelationsFor = relationsFor;
     });
     let targetAssetuuid = $state("");
     let relationDescription = $state("");
+    let message = $state("");
+    const removeField = (index: number) => {
+        if (!editedAsset?.fields) return;
+        editedAsset.fields = editedAsset.fields.filter((_, i) => i != index);
+    };
     const addField = () => {
         editedAsset?.fields.push({
             uuid: undefined,
@@ -26,11 +35,19 @@
 
     const saveAsset = async (event: SubmitEvent) => {
         event.preventDefault();
-        editedAsset = await invoke("update_asset", {
-            uuid: editedAsset?.uuid,
-            name: editedAsset?.name,
-            fields: editedAsset?.fields,
-        });
+        try {
+            editedAsset?.fields.forEach((field) =>
+                validInput(field.kind, field.value),
+            );
+            editedAsset = await invoke("update_asset", {
+                uuid: editedAsset?.uuid,
+                name: editedAsset?.name,
+                fields: editedAsset?.fields,
+            });
+            message = "L'asset à bien été sauvegardé !";
+        } catch (err) {
+            console.error(err);
+        }
     };
     const deleteAsset = async () => {
         try {
@@ -52,6 +69,9 @@
                 description: relationDescription,
                 sourceAssetUuid: editedAsset?.uuid,
                 targetAssetUuid: targetAssetuuid,
+            });
+            editedRelationsFor = await invoke("get_relations_for", {
+                source: editedAsset?.uuid,
             });
         } catch (err) {
             console.error(err);
@@ -75,14 +95,12 @@
         <button>Ajouter</button>
     </form>
     <div>
-        {#await invoke<Relation[]>( "get_relations_for", { source: editedAsset.uuid }, ) then relations}
-            {#each relations as relation}
-                ▶️ {relation.description} :
-                <a href="/assets/edit/{relation.target_asset_uuid}"
-                    >{relation.name}</a
-                >
-            {/each}
-        {/await}
+        {#each editedRelationsFor as relation}
+            ▶️ {relation.description} :
+            <a href="/assets/edit/{relation.target_asset_uuid}"
+                >{relation.name}</a
+            >
+        {/each}
     </div>
     <div>
         {#await invoke<Relation[]>( "get_relations_from", { source: editedAsset.uuid }, ) then relations}
@@ -101,6 +119,9 @@
         <ul>
             {#each editedAsset.fields as field, index}
                 <li>
+                    <button type="button" onclick={() => removeField(index)}
+                        >Supprimer</button
+                    >
                     <label for={`field_name_${index}`}>Nom :</label>
                     <input
                         type="text"
@@ -121,4 +142,7 @@
         </ul>
         <button>Sauvegarder</button>
     </form>
+    {#if message}
+        <span style="color: green;">{message}</span>
+    {/if}
 {/if}
