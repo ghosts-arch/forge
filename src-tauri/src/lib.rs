@@ -75,7 +75,7 @@ async fn create_relation(
     source_asset_uuid: String,
     target_asset_uuid: String,
     description: String,
-) -> Result<types::Relation, String> {
+) -> Result<types::NewRelation, String> {
     relations::create_relation(
         &state.pool,
         source_asset_uuid,

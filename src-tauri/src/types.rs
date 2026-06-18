@@ -15,6 +15,14 @@ pub enum Kind {
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct NewRelation {
+    pub uuid: String,
+    pub description: String,
+    pub source_asset_uuid: String,
+    pub target_asset_uuid: String,
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct Relation {
     pub uuid: String,
     pub description: String,
