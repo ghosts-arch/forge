@@ -148,7 +148,7 @@ pub async fn search_assets(
     pool: &sqlx::SqlitePool,
     query: String,
 ) -> Result<Vec<types::Asset>, String> {
-    let prepared_query = format!("%{}%", query);
+    let prepared_query = format!("%{}%", query.replace("%", "\\%").replace("_", "\\_"));
     let assets = sqlx::query_as::<_, types::Asset>(
         "SELECT DISTINCT assets.* FROM assets LEFT JOIN assets_fields ON assets.uuid = assets_fields.asset_id WHERE assets.name LIKE ?1 OR assets_fields.name LIKE ?2 OR assets_fields.text_value LIKE ?3",
     )
