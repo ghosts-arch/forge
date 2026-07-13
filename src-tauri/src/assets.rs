@@ -35,7 +35,7 @@ pub async fn get_asset(pool: &sqlx::SqlitePool, uuid: &str) -> Result<types::Ass
     Ok(asset)
 }
 
-pub async fn get_assets(pool: &sqlx::SqlitePool) -> Result<Vec<types::Asset>, String> {
+pub async fn get_assets(pool: &sqlx::SqlitePool) -> Result<Vec<types::AssetPayload>, String> {
     let assets = sqlx::query_as::<_, types::Asset>("SELECT * FROM assets")
         .fetch_all(pool)
         .await
@@ -59,7 +59,7 @@ pub async fn get_assets(pool: &sqlx::SqlitePool) -> Result<Vec<types::Asset>, St
             asset
         })
         .collect();
-    Ok(updated_assets)
+    Ok(updated_assets.into())
 }
 
 pub async fn update_asset(
