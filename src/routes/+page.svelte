@@ -1,37 +1,43 @@
 <script lang="ts">
-    import { searchAssets } from "$lib/api/assets.remote";
-    import { getModels } from "$lib/api/models.remote";
+    import { invoke } from "@tauri-apps/api/core";
 
-    let assets = $state([]);
-    let searchAsset: string = $state("");
+    import type { Asset } from "$lib/types";
 
-    const updateSearch = async () => {
-        if (searchAsset.length < 3) return;
-        assets = await searchAssets(searchAsset);
-        return assets;
+    let userInput: string = $state("");
+    let assets: Asset[] = $state([]);
+    let timer: ReturnType<typeof setTimeout>;
+    const searchAssets = async () => {
+        assets = await invoke("search_assets", { query: userInput });
     };
+    const debounce = () => {
+        clearTimeout(timer);
+        timer = setTimeout(searchAssets, 300);
+    };
+
+    $effect(() => {
+        if (!userInput.trim()) {
+            assets = [];
+        } else {
+            debounce();
+        }
+        return () => {
+            clearTimeout(timer);
+        };
+    });
 </script>
 
-<a href="/assets/add">Ajouter un asset</a>
+<a href="/assets/create">Ajouter un asset</a>
 <a href="/assets">liste des assets</a>
-<a href="/models/create">Ajouter un model</a>
-<a href="/models">liste des models</a>
 
-<ul>
-    {#each await getModels() as model}
-        <li>{model.name} - <a href="/models/edit/{model.id}">editer</a></li>
+<form role="search">
+    <input type="text" bind:value={userInput} />
+</form>
+
+<li>
+    {#each assets as asset}
+        <div>
+            <span>{asset.name}</span>
+            <a href="/assets/edit/{asset.uuid}">Editer</a>
+        </div>
     {/each}
-</ul>
-<input type="text" bind:value={searchAsset} oninput={updateSearch} />
-<div>
-    <ul>
-        {#each assets as { id, name, fields }}
-            <li>
-                {name} - <a href="/assets/edit/{id}">editer</a><br />
-                {#each fields as field}
-                    <span>{field.name} - {field.value}</span>
-                {/each}
-            </li>
-        {/each}
-    </ul>
-</div>
+</li>
