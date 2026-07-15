@@ -8,7 +8,10 @@ mod relations;
 mod types;
 
 #[tauri::command]
-async fn get_asset(state: State<'_, types::AppData>, uuid: String) -> Result<types::Asset, String> {
+async fn get_asset(
+    state: State<'_, types::AppData>,
+    uuid: String,
+) -> Result<types::AssetPayload, String> {
     assets::get_asset(&state.pool, &uuid)
         .await
         .map_err(|e| e.to_string())

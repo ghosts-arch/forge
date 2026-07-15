@@ -136,3 +136,21 @@ impl TryFrom<AssetFieldPayload> for NewAssetField {
         })
     }
 }
+
+impl TryFrom<AssetField> for AssetFieldPayload {
+    type Error = String;
+    fn try_from(asset_field: AssetField) -> Result<Self, Self::Error> {
+        let value = match asset_field.kind {
+            Kind::Text => asset_field.text_value.unwrap(),
+            Kind::Number => asset_field.number_value.map(|v| v.to_string()).unwrap(),
+            Kind::Date => asset_field.date_value.map(|v| v.to_string()).unwrap(),
+        };
+        Ok(AssetFieldPayload {
+            uuid: Some(asset_field.uuid),
+            asset_id: asset_field.asset_id,
+            name: asset_field.name,
+            kind: asset_field.kind,
+            value: value,
+        })
+    }
+}

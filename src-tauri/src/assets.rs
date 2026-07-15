@@ -17,13 +17,12 @@ pub async fn create_asset(pool: &sqlx::SqlitePool, name: &str) -> Result<types::
     Ok(result)
 }
 
-pub async fn get_asset(pool: &sqlx::SqlitePool, uuid: &str) -> Result<types::Asset, String> {
-    let mut asset =
-        sqlx::query_as::<_, types::Asset>("SELECT * FROM assets WHERE assets.uuid = ?1")
-            .bind(&uuid)
-            .fetch_one(pool)
-            .await
-            .map_err(|_| format!("L'uuid : {} n'existe pas", &uuid))?;
+pub async fn get_asset(pool: &sqlx::SqlitePool, uuid: &str) -> Result<types::AssetPayload, String> {
+    let asset = sqlx::query_as::<_, types::Asset>("SELECT * FROM assets WHERE assets.uuid = ?1")
+        .bind(&uuid)
+        .fetch_one(pool)
+        .await
+        .map_err(|_| format!("L'uuid : {} n'existe pas", &uuid))?;
     let fields = sqlx::query_as::<_, types::AssetField>(
         "SELECT *  FROM assets_fields WHERE assets_fields.asset_id = ?1",
     )
@@ -31,11 +30,20 @@ pub async fn get_asset(pool: &sqlx::SqlitePool, uuid: &str) -> Result<types::Ass
     .fetch_all(pool)
     .await
     .map_err(|e| e.to_string())?;
-    asset.fields = fields;
-    Ok(asset)
+    let fields: Vec<types::AssetFieldPayload> = fields
+        .into_iter()
+        .map(|f| types::AssetFieldPayload::try_from(f).unwrap())
+        .collect();
+    Ok(types::AssetPayload {
+        uuid: asset.uuid,
+        name: asset.name,
+        created_at: asset.created_at,
+        updated_at: asset.updated_at,
+        fields: fields,
+    })
 }
 
-pub async fn get_assets(pool: &sqlx::SqlitePool) -> Result<Vec<types::AssetPayload>, String> {
+pub async fn get_assets(pool: &sqlx::SqlitePool) -> Result<Vec<types::Asset>, String> {
     let assets = sqlx::query_as::<_, types::Asset>("SELECT * FROM assets")
         .fetch_all(pool)
         .await
@@ -188,7 +196,19 @@ pub mod tests {
     async fn test_get_asset_with_existing_uuid(pool: sqlx::SqlitePool) {
         let created_asset = create_asset(&pool, "existing-uuid").await.unwrap();
         let result = get_asset(&pool, &created_asset.uuid).await.unwrap();
-        assert_eq!(result, created_asset)
+        let fields: Vec<types::AssetFieldPayload> = result
+            .fields
+            .iter()
+            .map(|f| types::AssetFieldPayload::try_from(f.clone()).unwrap())
+            .collect();
+        let expected_payload = types::AssetPayload {
+            uuid: created_asset.uuid,
+            name: created_asset.name,
+            updated_at: created_asset.updated_at,
+            created_at: created_asset.created_at,
+            fields,
+        };
+        assert_eq!(result, expected_payload)
     }
 
     #[sqlx::test]

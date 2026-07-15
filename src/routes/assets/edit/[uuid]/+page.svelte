@@ -11,6 +11,7 @@
     let asset = $derived(data.asset);
     let relationsFor = $derived(data.relationsFor);
     let editedAsset: Asset | undefined = $state(undefined);
+    $inspect(editedAsset);
     let editedRelationsFor: Relation[] | undefined = $state(undefined);
     $effect(() => {
         editedAsset = asset;
@@ -103,7 +104,7 @@
         {/each}
     </div>
     <div>
-        {#await invoke<Relation[]>( "get_relations_from", { source: editedAsset.uuid }, ) then relations}
+        {#await invoke<Relation[]>( "get_relations_from", { source: editedAsset.uuid } ) then relations}
             {#each relations as relation}
                 ↩️ est référencé par :
                 <a href="/assets/edit/{relation.source_asset_uuid}"
@@ -134,7 +135,7 @@
                             <option {value}>{key.toLowerCase()}</option>
                         {/each}
                     </select>
-
+                    <span>{field.value}</span>
                     <Select kind={field.kind} bind:value={field.value} />
                 </li>
             {/each}

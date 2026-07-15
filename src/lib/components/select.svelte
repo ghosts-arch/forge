@@ -1,6 +1,7 @@
 <script lang="ts">
     let { kind, value = $bindable() }: { kind: string; value: string } =
         $props();
+    $inspect(value);
 </script>
 
 {#if kind === "text"}
