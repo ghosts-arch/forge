@@ -1,7 +1,3 @@
-# Tauri + SvelteKit + TypeScript
+# Forge
 
-This template should help get you started developing with Tauri, SvelteKit and TypeScript in Vite.
-
-## Recommended IDE Setup
-
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer).
+Vous avez besoin de suivre un stock de pièces détachées, retrouver facilement des documentations techniques ou encore d'organiser la création de votre prochaine campagne de jeux de rôles ? Forge est le logiciel dont vous avez besoin. La rapidité et la sécurité du language de programmation rust, couplé à une base de données locale , vous garantit de retrouver toutes vos données rapidement, même sans connexion internet.
