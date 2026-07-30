@@ -1,0 +1,8 @@
+:is(button, [type="submit"], [type="button"], [role="button"]).danger,
+[type="reset"],
+[type="file"]::file-selector-button {
+    --pico-background-color: #c52f21;
+    --pico-border-color: #c52f21;
+    --pico-color: --pico-primary-inverse;
+    cursor: pointer;
+}

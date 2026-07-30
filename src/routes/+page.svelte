@@ -28,7 +28,11 @@
 
 <section>
     <form role="search">
-        <input type="text" bind:value={userInput} />
+        <input
+            type="search"
+            bind:value={userInput}
+            placeholder="Rechercher un asset..."
+        />
     </form>
 
     <div class="grid">

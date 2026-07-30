@@ -19,11 +19,14 @@
     };
 </script>
 
-<a href="/">Retour</a>
-
 <form onsubmit={createAsset}>
-    <input bind:value={name} />
-    <button>Ajouter</button>
+    <label
+        >Nom de l'asset<input
+            bind:value={name}
+            placeholder="Nom de l'asset..."
+        /></label
+    >
+    <button type="submit">Ajouter</button>
 </form>
 {#if error}
     <span style="color: red;">{error}</span>
