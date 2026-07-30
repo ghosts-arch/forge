@@ -3,6 +3,6 @@
 [type="file"]::file-selector-button {
     --pico-background-color: #c52f21;
     --pico-border-color: #c52f21;
-    --pico-color: --pico-primary-inverse;
+    --pico-color: var(--pico-primary-inverse);
     cursor: pointer;
 }

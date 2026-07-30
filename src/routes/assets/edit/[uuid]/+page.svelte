@@ -147,7 +147,9 @@
             >Ajouter un champ</button
         >
         <div role="group">
-            <button class="danger" onclick={deleteAsset}>Supprimer</button>
+            <button class="danger" onclick={deleteAsset} type="button"
+                >Supprimer</button
+            >
             <button>Sauvegarder</button>
         </div>
     </form>
