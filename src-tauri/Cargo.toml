@@ -1,6 +1,6 @@
 [package]
 name = "forge"
-version = "0.1.0"
+version = "0.2.0"
 description = "Application bureau de gestion d'assets"
 authors = ["ghosts_arch"]
 edition = "2024"

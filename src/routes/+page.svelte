@@ -26,18 +26,21 @@
     });
 </script>
 
-<a href="/assets/create">Ajouter un asset</a>
-<a href="/assets">liste des assets</a>
+<section>
+    <form role="search">
+        <input
+            type="search"
+            bind:value={userInput}
+            placeholder="Rechercher un asset..."
+        />
+    </form>
 
-<form role="search">
-    <input type="text" bind:value={userInput} />
-</form>
-
-<li>
-    {#each assets as asset}
-        <div>
-            <span>{asset.name}</span>
-            <a href="/assets/edit/{asset.uuid}">Editer</a>
-        </div>
-    {/each}
-</li>
+    <div class="grid">
+        {#each assets as asset}
+            <article>
+                <span>{asset.name}</span>
+                <a href="/assets/edit/{asset.uuid}">Editer</a>
+            </article>
+        {/each}
+    </div>
+</section>

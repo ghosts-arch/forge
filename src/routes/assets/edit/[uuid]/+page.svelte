@@ -80,69 +80,123 @@
     };
 </script>
 
-<a href="/">Retour</a>
-
 {#if editedAsset}
-    <form onsubmit={addRelation}>
-        <label for="">Ajouter une relation</label>
-        <input type="text" bind:value={relationDescription} />
-        <select bind:value={targetAssetuuid}>
-            {#await invoke<AssetInformations[]>("get_relations") then relations}
+    <form onsubmit={saveAsset}>
+        <fieldset>
+            <label
+                >Nom de l'asset<input
+                    type="text"
+                    bind:value={editedAsset.name}
+                /></label
+            >
+        </fieldset>
+        {#if editedAsset.fields.length}
+            <table>
+                <thead>
+                    <tr>
+                        <th scope="col">Nom</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Valeur</th>
+                        <th scope="col"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {#each editedAsset.fields as field, index}
+                        <tr
+                            ><th scope="row"
+                                ><input
+                                    type="text"
+                                    id={`field_name_${index}`}
+                                    bind:value={field.name}
+                                    placeholder="Nom du champ..."
+                                /></th
+                            >
+                            <td
+                                ><select
+                                    bind:value={field.kind}
+                                    id={`field_kind_${index}`}
+                                >
+                                    {#each Object.entries(FieldKind) as [key, value]}
+                                        <option {value}
+                                            >{key.toLowerCase()}</option
+                                        >
+                                    {/each}
+                                </select></td
+                            >
+                            <td
+                                ><Select
+                                    kind={field.kind}
+                                    bind:value={field.value}
+                                /></td
+                            >
+                            <td
+                                ><button
+                                    type="button"
+                                    class="secondary"
+                                    onclick={() => removeField(index)}
+                                    >Supprimer</button
+                                ></td
+                            >
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+        {/if}
+
+        <button type="button" class="secondary" onclick={addField}
+            >Ajouter un champ</button
+        >
+        <div role="group">
+            <button class="danger" onclick={deleteAsset} type="button"
+                >Supprimer</button
+            >
+            <button>Sauvegarder</button>
+        </div>
+    </form>
+    <hr />
+    <div>
+        <form onsubmit={addRelation}>
+            <label
+                >Ajouter une relation <input
+                    type="text"
+                    bind:value={relationDescription}
+                /></label
+            >
+
+            <select bind:value={targetAssetuuid}>
+                {#await invoke<AssetInformations[]>("get_relations") then relations}
+                    {#each relations as relation}
+                        <option value={relation.uuid}>{relation.name}</option>
+                    {/each}
+                {/await}
+            </select>
+            <button class="secondary" type="submit">Ajouter</button>
+        </form>
+
+        <div>
+            {#each editedRelationsFor as relation}
+                <article>
+                    ▶️ {relation.description} :
+                    <a href="/assets/edit/{relation.target_asset_uuid}"
+                        >{relation.name}</a
+                    >
+                </article>
+            {/each}
+        </div>
+        <div>
+            {#await invoke<Relation[]>( "get_relations_from", { source: editedAsset.uuid } ) then relations}
                 {#each relations as relation}
-                    <option value={relation.uuid}>{relation.name}</option>
+                    <article>
+                        ↩️ est référencé par :
+                        <a href="/assets/edit/{relation.source_asset_uuid}"
+                            >{relation.name}</a
+                        >
+                    </article>
                 {/each}
             {/await}
-        </select>
-        <button>Ajouter</button>
-    </form>
-    <div>
-        {#each editedRelationsFor as relation}
-            ▶️ {relation.description} :
-            <a href="/assets/edit/{relation.target_asset_uuid}"
-                >{relation.name}</a
-            >
-        {/each}
+        </div>
     </div>
-    <div>
-        {#await invoke<Relation[]>( "get_relations_from", { source: editedAsset.uuid } ) then relations}
-            {#each relations as relation}
-                ↩️ est référencé par :
-                <a href="/assets/edit/{relation.source_asset_uuid}"
-                    >{relation.name}</a
-                >
-            {/each}
-        {/await}
-    </div>
-    <form onsubmit={saveAsset}>
-        <button type="button" onclick={deleteAsset}>Supprimer</button>
-        <label for="asset_name">Nom :</label>
-        <input type="text" id="asset_name" bind:value={editedAsset.name} />
-        <ul>
-            {#each editedAsset.fields as field, index}
-                <li>
-                    <button type="button" onclick={() => removeField(index)}
-                        >Supprimer</button
-                    >
-                    <label for={`field_name_${index}`}>Nom :</label>
-                    <input
-                        type="text"
-                        id={`field_name_${index}`}
-                        bind:value={field.name}
-                    />
-                    <label for={`field_kind_${index}`}>Type : </label>
-                    <select bind:value={field.kind} id={`field_kind_${index}`}>
-                        {#each Object.entries(FieldKind) as [key, value]}
-                            <option {value}>{key.toLowerCase()}</option>
-                        {/each}
-                    </select>
-                    <span>{field.value}</span>
-                    <Select kind={field.kind} bind:value={field.value} />
-                </li>
-            {/each}
-            <button type="button" onclick={addField}>Ajouter un champ</button>
-        </ul>
-        <button>Sauvegarder</button>
-    </form>
+
     {#if message}
         <span style="color: green;">{message}</span>
     {/if}

@@ -5,9 +5,9 @@
 </script>
 
 {#if kind === "text"}
-    <input type="text" bind:value />
+    <input type="text" bind:value placeholder="Valeur du champ..." />
 {:else if kind === "number"}
-    <input type="number" bind:value />
+    <input type="number" bind:value placeholder="Valeur du champ..." />
 {:else if kind === "date"}
-    <input type="date" bind:value />
+    <input type="date" bind:value placeholder="Valeur du champ..." />
 {/if}

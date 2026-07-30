@@ -4,10 +4,10 @@
     let { data }: PageProps = $props();
 </script>
 
-<a href="/">Retour</a>
-
-<ul>
+<div class="grid">
     {#each data.assets as asset}
-        <li>{asset.name} - <a href="/assets/edit/{asset.uuid}">editer</a></li>
+        <article>
+            {asset.name} - <a href="/assets/edit/{asset.uuid}">editer</a>
+        </article>
     {/each}
-</ul>
+</div>
